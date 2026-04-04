@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════
+   DSA TRACKER — KINETIC ARCHIVE DESIGN SYSTEM
+   ═══════════════════════════════════════════════ */
+
+/* Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background-color: #0a0a0f;
+  color: #f9f5fd;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #25252d;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00ff88;
+}
+
+/* Glassmorphism Card */
+@layer components {
+  .glass-card {
+    @apply bg-card-dark/60 backdrop-blur-xl border border-white/5 rounded-lg;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-card:hover {
+    @apply bg-card-hover/60 border-neon-green/10;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.05);
+  }
+
+  .glass-card-static {
+    @apply bg-card-dark/60 backdrop-blur-xl border border-white/5 rounded-lg;
+  }
+
+  /* Neon Glow Effects */
+  .neon-glow {
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.3),
+                0 0 30px rgba(0, 255, 136, 0.1);
+  }
+
+  .neon-glow-sm {
+    box-shadow: 0 0 5px rgba(0, 255, 136, 0.2);
+  }
+
+  .neon-text-glow {
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5),
+                 0 0 20px rgba(0, 255, 136, 0.2);
+  }
+
+  /* Ghost Border */
+  .ghost-border {
+    border: 1px solid rgba(118, 116, 123, 0.15);
+  }
+
+  /* Gradient Divider */
+  .gradient-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.2), transparent);
+  }
+
+  /* Custom Checkbox */
+  .custom-checkbox {
+    @apply w-5 h-5 rounded border-2 border-white/20 cursor-pointer transition-all duration-300;
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+  }
+
+  .custom-checkbox:checked {
+    @apply border-neon-green bg-neon-green;
+  }
+
+  .custom-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #0a0a0f;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .custom-checkbox:hover {
+    @apply border-neon-green/50;
+  }
+
+  /* Badge Styles */
+  .badge-easy {
+    @apply text-easy bg-easy/10 border border-easy/20;
+  }
+
+  .badge-medium {
+    @apply text-medium bg-medium/10 border border-medium/20;
+  }
+
+  .badge-hard {
+    @apply text-hard bg-hard/10 border border-hard/20;
+  }
+
+  /* Active Nav Item */
+  .nav-active {
+    @apply text-neon-green bg-neon-green/10 border-l-2 border-neon-green;
+  }
+
+  /* Filter Button */
+  .filter-btn {
+    @apply px-3 py-1.5 text-xs font-mono rounded transition-all duration-300 border border-white/10 text-white/60 hover:text-white hover:border-white/20;
+  }
+
+  .filter-btn-active {
+    @apply px-3 py-1.5 text-xs font-mono rounded border border-neon-green/30 text-neon-green bg-neon-green/10;
+  }
+}
+
+/* Progress Ring Animation */
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+/* Accordion animation */
+.accordion-content {
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+}
+
+/* Ambient glow for primary elements */
+.ambient-glow {
+  position: relative;
+}
+
+.ambient-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), transparent, rgba(0, 255, 136, 0.05));
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.ambient-glow:hover::before {
+  opacity: 1;
+}
+
+/* Fade gradient for sidebar */
+.sidebar-gradient {
+  background: linear-gradient(180deg, #131319 0%, #0a0a0f 100%);
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+}
+
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Stagger animation for lists */
+.stagger-item {
+  animation: slide-up 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
