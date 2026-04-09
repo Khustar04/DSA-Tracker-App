@@ -2,8 +2,12 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: '◈', description: 'Overview & stats' },
+  { path: '/dashboard', label: 'Dashboard', icon: '◈', description: 'Overview & stats' },
   { path: '/tracker', label: 'Tracker', icon: '▤', description: 'Problem list' },
+  { path: '/striver-a2z', label: 'Striver A2Z', icon: '👑', description: 'Curated 455 list' },
+  { path: '/custom-sheets', label: 'Custom Sheets', icon: '📑', description: 'Your own lists' },
+  { path: '/leaderboard', label: 'Leaderboard', icon: '🏆', description: 'Friends sync' },
+  { path: '/badges', label: 'Achievements', icon: '⭐', description: 'Global tracker' },
   { path: '/notes', label: 'Notes', icon: '✎', description: 'Your notes' },
   { path: '/future-plan', label: 'Future Plan', icon: '◎', description: 'Roadmap' },
 ];
@@ -31,10 +35,10 @@ export default function Sidebar({ isOpen, onClose }) {
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="flex flex-col h-full p-4">
+        <div className="flex flex-col h-full overflow-y-auto custom-scrollbar p-4">
           {/* User Info (when authenticated) */}
           {isAuthenticated && (
-            <div className="mb-4 px-3 py-3 rounded bg-neon-green/[0.03] border border-neon-green/10">
+            <Link to="/profile" onClick={onClose} className="mb-4 px-3 py-3 rounded bg-neon-green/[0.03] border border-neon-green/10 hover:bg-neon-green/[0.08] transition-colors block cursor-pointer group">
               <div className="flex items-center gap-2.5">
                 {userAvatar ? (
                   <img src={userAvatar} alt={userName} className="w-8 h-8 rounded-full border border-neon-green/20" />
@@ -44,14 +48,14 @@ export default function Sidebar({ isOpen, onClose }) {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-mono text-white/80 truncate">{userName}</p>
-                  <p className="text-[9px] font-mono text-neon-green/50 flex items-center gap-1">
+                  <p className="text-[11px] font-mono text-white/80 group-hover:text-white truncate transition-colors">{userName}</p>
+                  <p className="text-[9px] font-mono text-neon-green/50 flex items-center gap-1 mt-0.5">
                     <span className="w-1 h-1 rounded-full bg-neon-green" />
-                    Cloud synced
+                    Edit Profile
                   </p>
                 </div>
               </div>
-            </div>
+            </Link>
           )}
 
           {/* Nav Items */}

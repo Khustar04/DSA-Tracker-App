@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: '◈' },
+  { path: '/dashboard', label: 'Dashboard', icon: '◈' },
   { path: '/tracker', label: 'Tracker', icon: '▤' },
   { path: '/notes', label: 'Notes', icon: '✎' },
   { path: '/future-plan', label: 'Future Plan', icon: '◎' },
@@ -50,7 +50,7 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
               <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
-          <Link to="/" className="flex items-center gap-2 group">
+          <Link to="/dashboard" className="flex items-center gap-2 group">
             <div className="w-8 h-8 rounded bg-neon-green/10 flex items-center justify-center border border-neon-green/20 group-hover:neon-glow-sm transition-all duration-300">
               <span className="text-neon-green font-bold text-sm font-mono">⟨/⟩</span>
             </div>
