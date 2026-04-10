@@ -40,10 +40,8 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     setDbLoading(true);
-    const [userStats, weeklyOrMonthlyAct] = await Promise.all([
-      supabaseService.getUserStats(user.id),
-      supabaseService.getAllActivity(user.id)
-    ]);
+    const userStats = await supabaseService.getUserStats(user.id);
+    const weeklyOrMonthlyAct = await supabaseService.getAllActivity(user.id);
     setStats(userStats);
     setActivity(weeklyOrMonthlyAct);
     setDbLoading(false);

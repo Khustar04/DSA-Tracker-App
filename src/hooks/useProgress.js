@@ -22,16 +22,21 @@ export function useProgress() {
   const loadedRef = useRef(false);
 
   // Get auth state (returns default values when AuthProvider is absent)
-  let authState = { user: null, isAuthenticated: false };
+  let authState = { user: null, isAuthenticated: false, loading: true };
   try {
     authState = useAuth();
   } catch {
     // useAuth throws if not inside AuthProvider — use defaults
+    authState = { user: null, isAuthenticated: false, loading: false };
   }
-  const { user, isAuthenticated } = authState;
+  const { user, isAuthenticated, loading: authLoading } = authState;
 
   // ─── Load all data ───────────────────────────────────────
   const loadData = useCallback(async () => {
+    // Don't load data while auth is still initializing — this prevents
+    // concurrent Supabase lock acquisition that causes "Lock was released" errors
+    if (authLoading) return;
+
     setLoading(true);
     try {
       // Set the userId in storageService for routing
@@ -48,12 +53,10 @@ export function useProgress() {
         storageService.setUserId(null);
       }
 
-      const [solvedData, notesData, streakData, todayData] = await Promise.all([
-        storageService.getSolvedProblems(),
-        storageService.getNotes(),
-        storageService.getStreak(),
-        storageService.getTodayCount(),
-      ]);
+      const solvedData = await storageService.getSolvedProblems();
+      const notesData = await storageService.getNotes();
+      const streakData = await storageService.getStreak();
+      const todayData = await storageService.getTodayCount();
 
       setSolved(solvedData || {});
       setNotes(notesData || {});
@@ -64,7 +67,7 @@ export function useProgress() {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id, authLoading]);
 
   // Reload data when auth state changes
   useEffect(() => {
@@ -93,10 +96,8 @@ export function useProgress() {
       const newSolved = await storageService.toggleProblem(problemId, currentlySolved);
       setSolved(newSolved || {});
 
-      const [newStreak, newToday] = await Promise.all([
-        storageService.getStreak(),
-        storageService.getTodayCount(),
-      ]);
+      const newStreak = await storageService.getStreak();
+      const newToday = await storageService.getTodayCount();
       setStreak(newStreak);
       setTodayCount(newToday);
     } catch (error) {
