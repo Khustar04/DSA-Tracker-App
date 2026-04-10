@@ -183,6 +183,9 @@ export default function ProfilePage() {
                     try {
                       const url = await supabaseService.uploadAvatar(user.id, file);
                       setFormData(p => ({...p, avatar_url: url}));
+                      // Auto-save avatar to profile immediately
+                      await supabaseService.upsertProfile(user.id, { avatar_url: url });
+                      completeProfile({ ...profile, avatar_url: url });
                       toast.success('Image uploaded!', { id: 'upload' });
                     } catch (err) {
                       toast.error('Failed to upload image.', { id: 'upload' });

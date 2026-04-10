@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertTriangle } from 'lucide-react';
 
 export default function LoginPage() {
   const {
     loginWithGoogle,
     loginWithEmail,
     resetPassword,
+    resendOtp,
     isAuthenticated,
+    emailNotVerified,
     loading: authLoading,
     isSupabaseReady,
   } = useAuth();
@@ -22,6 +24,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
+  const [verificationEmail, setVerificationEmail] = useState(null);
 
   // Redirect if already authenticated
   if (isAuthenticated) {
@@ -38,10 +41,15 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    const { error: loginError } = await loginWithEmail(identifier.trim(), password);
+    const result = await loginWithEmail(identifier.trim(), password);
 
-    if (loginError) {
-      setError(loginError.message);
+    if (result.needsVerification) {
+      // User exists but email not verified — show banner
+      setVerificationEmail(result.email);
+      setError(result.error.message);
+      setLoading(false);
+    } else if (result.error) {
+      setError(result.error.message);
       setLoading(false);
     } else {
       toast.success('Welcome back!');
@@ -159,6 +167,41 @@ export default function LoginPage() {
             Sign in to your DSA Tracker account
           </p>
         </div>
+        {/* Email Verification Warning Banner */}
+        {(verificationEmail || emailNotVerified) && (
+          <div className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 animate-fade-in">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="text-yellow-400 shrink-0 mt-0.5" size={18} />
+              <div className="flex-1">
+                <p className="text-sm font-mono text-yellow-400 font-semibold">Email Not Verified</p>
+                <p className="text-xs text-white/50 mt-1">
+                  You must verify your email before logging in. Check your inbox (and spam folder) for the verification code.
+                </p>
+                {verificationEmail && (
+                  <div className="flex items-center gap-2 mt-3">
+                    <Link
+                      to="/signup"
+                      className="text-xs font-mono text-neon-green/70 hover:text-neon-green transition-colors underline underline-offset-2"
+                    >
+                      Go to verification page →
+                    </Link>
+                    <span className="text-white/15">|</span>
+                    <button
+                      onClick={async () => {
+                        const { error } = await resendOtp(verificationEmail);
+                        if (error) toast.error(error.message);
+                        else toast.success('Verification code resent!');
+                      }}
+                      className="text-xs font-mono text-white/40 hover:text-white/60 transition-colors"
+                    >
+                      Resend code
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Login Card */}
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 backdrop-blur-xl">

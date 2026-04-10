@@ -592,12 +592,15 @@ const supabaseService = {
 
   uploadAvatar: async (userId, file) => {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}-${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    // Use deterministic filename so re-uploads overwrite the old avatar
+    const filePath = `${userId}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(filePath, file);
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true, // Overwrite existing file
+      });
 
     if (uploadError) {
       console.error('Error uploading avatar:', uploadError);
@@ -608,7 +611,8 @@ const supabaseService = {
       .from('avatars')
       .getPublicUrl(filePath);
 
-    return data.publicUrl;
+    // Add cache-busting timestamp so browsers always fetch the latest avatar
+    return `${data.publicUrl}?t=${Date.now()}`;
   },
 
   searchUsers: async (query) => {

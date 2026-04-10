@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
 
   // Helper to load profile
   const fetchAndSetProfile = async (authSession) => {
@@ -43,6 +44,14 @@ export function AuthProvider({ children }) {
     try {
       // Get initial session
       supabase.auth.getSession().then(({ data: { session } }) => {
+        // Block unverified email users from accessing the app
+        if (session?.user && session.user.app_metadata?.provider === 'email' && !session.user.email_confirmed_at) {
+          // Sign them out — they haven't verified yet
+          supabase.auth.signOut();
+          setEmailNotVerified(true);
+          setLoading(false);
+          return;
+        }
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -64,6 +73,17 @@ export function AuthProvider({ children }) {
     try {
       const { data } = supabase.auth.onAuthStateChange(
         async (_event, session) => {
+          // Block unverified email users
+          if (session?.user && session.user.app_metadata?.provider === 'email' && !session.user.email_confirmed_at) {
+            supabase.auth.signOut();
+            setEmailNotVerified(true);
+            setSession(null);
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+            return;
+          }
+          setEmailNotVerified(false);
           setSession(session);
           setUser(session?.user ?? null);
           if (session?.user) {
@@ -157,6 +177,23 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // ─── Resend OTP ────────────────────────────────────────────
+  const resendOtp = async (email) => {
+    if (!isSupabaseConfigured()) {
+      return { error: { message: 'Supabase not configured.' } };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+      return { data, error };
+    } catch (err) {
+      return { error: { message: err.message || 'Failed to resend code' } };
+    }
+  };
+
   // ─── Email/Password Login ─────────────────────────────────
   const loginWithEmail = async (emailOrUsername, password) => {
     if (!isSupabaseConfigured()) {
@@ -180,6 +217,20 @@ export function AuthProvider({ children }) {
         password,
       });
 
+      if (error) return { data, error };
+
+      // Enforce email verification for email/password signups
+      if (data.user && !data.user.email_confirmed_at) {
+        // Sign them out immediately — don't let unverified users in
+        await supabase.auth.signOut();
+        return {
+          data: null,
+          error: { message: 'Please verify your email address before logging in. Check your inbox for the verification code.' },
+          needsVerification: true,
+          email,
+        };
+      }
+
       return { data, error };
     } catch (err) {
       return { error: { message: err.message || 'Login failed' } };
@@ -194,11 +245,27 @@ export function AuthProvider({ children }) {
 
     try {
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       return { data, error };
     } catch (err) {
       return { error: { message: err.message } };
+    }
+  };
+
+  // ─── Update Password (after reset link) ────────────────────
+  const updatePassword = async (newPassword) => {
+    if (!isSupabaseConfigured()) {
+      return { error: { message: 'Supabase not configured.' } };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      return { data, error };
+    } catch (err) {
+      return { error: { message: err.message || 'Password update failed' } };
     }
   };
 
@@ -220,13 +287,16 @@ export function AuthProvider({ children }) {
     profile,
     session,
     loading,
+    emailNotVerified,
     isAuthenticated: !!user,
     isSupabaseReady: isSupabaseConfigured(),
     loginWithGoogle,
     signUpWithEmail,
     verifyOtp,
+    resendOtp,
     loginWithEmail,
     resetPassword,
+    updatePassword,
     logout,
     completeProfile,
   };

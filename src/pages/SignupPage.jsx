@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import { Mail, Lock, User, AtSign, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
 
 export default function SignupPage() {
-  const { signUpWithEmail, loginWithGoogle, verifyOtp, isAuthenticated, loading: authLoading } = useAuth();
+  const { signUpWithEmail, loginWithGoogle, verifyOtp, resendOtp, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState('form'); // 'form' | 'otp'
@@ -13,6 +13,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
   const otpRefs = useRef([]);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -212,12 +213,33 @@ export default function SignupPage() {
             <p className="text-center text-xs text-white/30 font-mono mt-4">
               Didn't receive the code?{' '}
               <button
-                onClick={() => {
-                  toast.success('New code sent!');
+                onClick={async () => {
+                  if (resendCooldown > 0) return;
+                  const { error } = await resendOtp(formData.email);
+                  if (error) {
+                    toast.error(error.message || 'Failed to resend code');
+                  } else {
+                    toast.success('New code sent!');
+                    setResendCooldown(60);
+                    const timer = setInterval(() => {
+                      setResendCooldown((prev) => {
+                        if (prev <= 1) {
+                          clearInterval(timer);
+                          return 0;
+                        }
+                        return prev - 1;
+                      });
+                    }, 1000);
+                  }
                 }}
-                className="text-neon-green/70 hover:text-neon-green transition-colors"
+                disabled={resendCooldown > 0}
+                className={`transition-colors ${
+                  resendCooldown > 0
+                    ? 'text-white/20 cursor-not-allowed'
+                    : 'text-neon-green/70 hover:text-neon-green'
+                }`}
               >
-                Resend
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend'}
               </button>
             </p>
           </div>

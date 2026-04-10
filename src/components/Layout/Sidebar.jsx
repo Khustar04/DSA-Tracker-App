@@ -14,10 +14,10 @@ const navItems = [
 
 export default function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
-  const { user, isAuthenticated, isSupabaseReady } = useAuth();
+  const { user, profile, isAuthenticated, isSupabaseReady } = useAuth();
 
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
-  const userAvatar = user?.user_metadata?.avatar_url;
+  const userName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+  const userAvatar = profile?.avatar_url || user?.user_metadata?.avatar_url;
 
   return (
     <>

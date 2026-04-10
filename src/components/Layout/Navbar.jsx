@@ -32,8 +32,9 @@ export default function Navbar({ onToggleSidebar, sidebarOpen }) {
   };
 
   // Get user display name and avatar
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
-  const userAvatar = user?.user_metadata?.avatar_url;
+  const { profile } = useAuth();
+  const userName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+  const userAvatar = profile?.avatar_url || user?.user_metadata?.avatar_url;
   const userInitial = userName.charAt(0).toUpperCase();
 
   return (
