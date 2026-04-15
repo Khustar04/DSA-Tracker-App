@@ -35,7 +35,11 @@ export function useProgress() {
   const loadData = useCallback(async () => {
     // Don't load data while auth is still initializing — this prevents
     // concurrent Supabase lock acquisition that causes "Lock was released" errors
-    if (authLoading) return;
+    if (authLoading) {
+      // Avoid permanent skeleton if auth gets stuck in edge network cases.
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -53,10 +57,16 @@ export function useProgress() {
         storageService.setUserId(null);
       }
 
-      const solvedData = await storageService.getSolvedProblems();
-      const notesData = await storageService.getNotes();
-      const streakData = await storageService.getStreak();
-      const todayData = await storageService.getTodayCount();
+      const withTimeout = (promise, fallback) =>
+        Promise.race([
+          promise,
+          new Promise((resolve) => setTimeout(() => resolve(fallback), 8000)),
+        ]);
+
+      const solvedData = await withTimeout(storageService.getSolvedProblems(), {});
+      const notesData = await withTimeout(storageService.getNotes(), {});
+      const streakData = await withTimeout(storageService.getStreak(), { current: 0, longest: 0, lastDate: null });
+      const todayData = await withTimeout(storageService.getTodayCount(), 0);
 
       setSolved(solvedData || {});
       setNotes(notesData || {});

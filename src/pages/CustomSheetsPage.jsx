@@ -28,13 +28,19 @@ export default function CustomSheetsPage() {
 
   const loadSheets = async () => {
     setLoading(true);
-    const [ownData, publicData] = await Promise.all([
-      supabaseService.getCustomSheets(user.id),
-      supabaseService.getPublicCustomSheets(user.id),
-    ]);
-    setSheets(ownData || []);
-    setPublicSheets(publicData || []);
-    setLoading(false);
+    try {
+      const [ownData, publicData] = await Promise.all([
+        supabaseService.getCustomSheets(user.id),
+        supabaseService.getPublicCustomSheets(user.id),
+      ]);
+      setSheets(ownData || []);
+      setPublicSheets(publicData || []);
+    } catch (error) {
+      console.error('Custom sheets load failed:', error);
+      toast.error('Failed to load sheets');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreate = async (e) => {

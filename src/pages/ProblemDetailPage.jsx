@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import supabaseService from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, Tag, Lightbulb, ExternalLink } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function ProblemDetailPage() {
   const { id } = useParams();
@@ -21,9 +22,15 @@ export default function ProblemDetailPage() {
 
   const loadProblem = async () => {
     setLoading(true);
-    const data = await supabaseService.getCustomProblem(id);
-    setProblem(data);
-    setLoading(false);
+    try {
+      const data = await supabaseService.getCustomProblem(id);
+      setProblem(data);
+    } catch (error) {
+      console.error('Problem load failed:', error);
+      toast.error('Failed to load problem details');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {

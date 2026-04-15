@@ -26,17 +26,23 @@ export default function SheetViewPage() {
 
   const loadData = async () => {
     setLoading(true);
-    // Fetch sheet name and problems concurrently
-    const [sheets, data] = await Promise.all([
-      supabaseService.getCustomSheets(user.id),
-      supabaseService.getCustomSheetProblems(user.id, sheetId)
-    ]);
-    
-    const currSheet = sheets.find(s => s.id === sheetId);
-    if (currSheet) setSheetName(currSheet.title);
+    try {
+      // Fetch sheet name and problems concurrently
+      const [sheets, data] = await Promise.all([
+        supabaseService.getCustomSheets(user.id),
+        supabaseService.getCustomSheetProblems(user.id, sheetId)
+      ]);
+      
+      const currSheet = sheets.find(s => s.id === sheetId);
+      if (currSheet) setSheetName(currSheet.title);
 
-    setProblems(data || []);
-    setLoading(false);
+      setProblems(data || []);
+    } catch (error) {
+      console.error('Sheet load failed:', error);
+      toast.error('Failed to load sheet');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSaveProblem = async (problemData) => {

@@ -21,7 +21,10 @@ export function AuthProvider({ children }) {
         setProfile(null);
         return;
       }
-      const prof = await supabaseService.getProfile(authSession.user.id);
+      const prof = await Promise.race([
+        supabaseService.getProfile(authSession.user.id),
+        new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
+      ]);
       setProfile(prof || { _isNew: true });
     } catch (error) {
       console.error('Error fetching profile:', error);

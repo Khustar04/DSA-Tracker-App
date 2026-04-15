@@ -40,11 +40,17 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     setDbLoading(true);
-    const userStats = await supabaseService.getUserStats(user.id);
-    const weeklyOrMonthlyAct = await supabaseService.getAllActivity(user.id);
-    setStats(userStats);
-    setActivity(weeklyOrMonthlyAct);
-    setDbLoading(false);
+    try {
+      const userStats = await supabaseService.getUserStats(user.id);
+      const weeklyOrMonthlyAct = await supabaseService.getAllActivity(user.id);
+      setStats(userStats);
+      setActivity(weeklyOrMonthlyAct);
+    } catch (error) {
+      console.error('Dashboard load failed:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setDbLoading(false);
+    }
   };
 
   const handleResetStreak = async () => {

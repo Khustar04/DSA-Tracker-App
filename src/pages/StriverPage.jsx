@@ -20,9 +20,15 @@ export default function StriverPage() {
 
   const loadProgress = async () => {
     setLoading(true);
-    const data = await supabaseService.getStriverProgress(user.id);
-    setProgress(data);
-    setLoading(false);
+    try {
+      const data = await supabaseService.getStriverProgress(user.id);
+      setProgress(data);
+    } catch (error) {
+      console.error('Striver progress load failed:', error);
+      toast.error('Failed to load Striver progress');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleToggleProblem = async (problemId, isSolved) => {

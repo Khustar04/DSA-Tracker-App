@@ -42,9 +42,15 @@ export default function LeaderboardPage() {
   const loadLeaderboard = async () => {
     if (!user) return;
     setLoading(true);
-    const data = await supabaseService.getFriendsLeaderboard(user.id, activeFilter);
-    setLeaderboard(data || []);
-    setLoading(false);
+    try {
+      const data = await supabaseService.getFriendsLeaderboard(user.id, activeFilter);
+      setLeaderboard(data || []);
+    } catch (error) {
+      console.error('Leaderboard load failed:', error);
+      toast.error('Failed to load leaderboard');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSearch = async (e) => {

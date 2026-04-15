@@ -24,31 +24,37 @@ export default function BadgesPage() {
   const loadData = async () => {
     if (!user) return;
     setLoading(true);
-    // 1. Fetch user badges and friend badges concurrently
-    const [userBadgesList, friendData] = await Promise.all([
-      supabaseService.checkAndAwardBadges(user.id, (stats, daily, friends, striverSize, existingIds) => {
-        const newAwards = [];
-        for (const def of BADGE_DEFINITIONS) {
-          if (!existingIds.includes(def.id) && def.condition(stats, daily, friends, striverSize)) {
-            newAwards.push(def);
+    try {
+      // 1. Fetch user badges and friend badges concurrently
+      const [userBadgesList, friendData] = await Promise.all([
+        supabaseService.checkAndAwardBadges(user.id, (stats, daily, friends, striverSize, existingIds) => {
+          const newAwards = [];
+          for (const def of BADGE_DEFINITIONS) {
+            if (!existingIds.includes(def.id) && def.condition(stats, daily, friends, striverSize)) {
+              newAwards.push(def);
+            }
           }
-        }
-        return newAwards;
-      }),
-      supabaseService.getFriendsBadges(user.id)
-    ]);
+          return newAwards;
+        }),
+        supabaseService.getFriendsBadges(user.id)
+      ]);
 
-    const prevCount = earnedBadges.length;
-    setEarnedBadges(userBadgesList);
+      const prevCount = earnedBadges.length;
+      setEarnedBadges(userBadgesList);
 
-    // If new badges unlocking, notify
-    if (prevCount > 0 && userBadgesList.length > prevCount) {
-      const diff = userBadgesList.length - prevCount;
-      toast.success(`Unlocked ${diff} new badge${diff > 1 ? 's' : ''}!`);
+      // If new badges unlocking, notify
+      if (prevCount > 0 && userBadgesList.length > prevCount) {
+        const diff = userBadgesList.length - prevCount;
+        toast.success(`Unlocked ${diff} new badge${diff > 1 ? 's' : ''}!`);
+      }
+
+      setFriendsBadges(friendData);
+    } catch (error) {
+      console.error('Badges load failed:', error);
+      toast.error('Failed to load badges');
+    } finally {
+      setLoading(false);
     }
-
-    setFriendsBadges(friendData);
-    setLoading(false);
   };
 
   if (loading) {
