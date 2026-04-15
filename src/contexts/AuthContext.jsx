@@ -147,10 +147,22 @@ export function AuthProvider({ children }) {
       if (error) return { error };
 
       // Check if email confirmation is required
-      // If user.identities is empty or user.confirmed_at is null, OTP is needed
+      // If user.identities is empty, it means the user ALREADY existed but is unconfirmed.
+      // If confirmed_at is null, they are fresh or unconfirmed.
       const needsVerification =
         data.user &&
         (!data.user.confirmed_at || data.user.identities?.length === 0);
+
+      // CRITICAL FIX: Supabase's default signUp() DOES NOT send an email if the user already exists!
+      // So if identities is 0 (duplicate signup), we must explicitly trigger a resend so they get the code.
+      if (needsVerification && data.user.identities?.length === 0) {
+        const { error: resendError } = await supabase.auth.resend({ type: 'signup', email });
+        // We ignore resend rate-limit errors because they might have just requested it, 
+        // but if it works, they'll get the email.
+        if (resendError && !resendError.message.includes('rate limit')) {
+          console.error("Resend error on duplicate signup:", resendError);
+        }
+      }
 
       return { data, error: null, needsVerification };
     } catch (err) {

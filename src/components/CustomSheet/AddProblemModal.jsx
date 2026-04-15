@@ -11,6 +11,8 @@ export default function AddProblemModal({ isOpen, onClose, onAdd, initialData = 
     problem_title: '',
     difficulty: 'Easy',
     problem_link: '',
+    leetcode_link: '',
+    gfg_link: '',
     problem_statement: '',
     input_format: '',
     output_format: ''
@@ -26,6 +28,8 @@ export default function AddProblemModal({ isOpen, onClose, onAdd, initialData = 
         problem_title: initialData.problem_title || '',
         difficulty: initialData.difficulty || 'Easy',
         problem_link: initialData.problem_link || '',
+        leetcode_link: initialData.leetcode_link || '',
+        gfg_link: initialData.gfg_link || '',
         problem_statement: initialData.problem_statement || '',
         input_format: initialData.input_format || '',
         output_format: initialData.output_format || ''
@@ -63,7 +67,7 @@ export default function AddProblemModal({ isOpen, onClose, onAdd, initialData = 
     } else if (isOpen) {
       // Reset for new addition
       setFormData({
-        problem_title: '', difficulty: 'Easy', problem_link: '', problem_statement: '',
+        problem_title: '', difficulty: 'Easy', problem_link: '', leetcode_link: '', gfg_link: '', problem_statement: '',
         input_format: '', output_format: ''
       });
       setSelectedTopics([]);
@@ -178,6 +182,16 @@ export default function AddProblemModal({ isOpen, onClose, onAdd, initialData = 
             <div className="space-y-1">
               <label className="text-xs font-mono text-white/50 uppercase">Problem Link</label>
               <input type="url" name="problem_link" value={formData.problem_link} onChange={handleChange} placeholder="https://leetcode.com/..." className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-neon-green/50" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1">
+                <label className="text-xs font-mono text-white/50 uppercase">LeetCode Link</label>
+                <input type="url" name="leetcode_link" value={formData.leetcode_link} onChange={handleChange} placeholder="https://leetcode.com/problems/..." className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-neon-green/50" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-mono text-white/50 uppercase">GFG Link</label>
+                <input type="url" name="gfg_link" value={formData.gfg_link} onChange={handleChange} placeholder="https://www.geeksforgeeks.org/..." className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-neon-green/50" />
+              </div>
             </div>
 
             {/* In/Out Formats Block */}

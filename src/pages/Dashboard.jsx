@@ -109,7 +109,7 @@ export default function Dashboard() {
       </div>
 
       {/* Top Global Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <StatsCard
           icon="🎯"
           label="Total Global Solved"
@@ -121,8 +121,15 @@ export default function Dashboard() {
           icon="🔥"
           label="Current Streak"
           value={`${stats.current_streak}d`}
-          sublabel={`longest: ${stats.longest_streak}d`}
+          sublabel="Active consecutive days"
           color="#f59e0b"
+        />
+        <StatsCard
+          icon="🏅"
+          label="Longest Streak"
+          value={`${stats.longest_streak}d`}
+          sublabel="Best run so far"
+          color="#facc15"
         />
         <StatsCard
           icon="⭐"

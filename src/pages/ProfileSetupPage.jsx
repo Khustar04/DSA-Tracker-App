@@ -5,6 +5,8 @@ import supabaseService from '../services/supabaseService';
 import { toast } from 'react-hot-toast';
 import { User, CheckCircle, AlertCircle } from 'lucide-react';
 
+const TARGET_COMPANIES = ['Google', 'Microsoft', 'Amazon', 'Meta', 'Adobe', 'Atlassian', 'Uber', 'Flipkart'];
+
 export default function ProfileSetupPage() {
   const { user, profile, completeProfile } = useAuth();
   const navigate = useNavigate();
@@ -13,7 +15,10 @@ export default function ProfileSetupPage() {
     username: '',
     full_name: '',
     about: '',
-    avatar_url: ''
+    avatar_url: '',
+    college_name: '',
+    graduation_year: '',
+    target_companies: [],
   });
 
   const [usernameStatus, setUsernameStatus] = useState('idle'); // idle, checking, valid, invalid
@@ -25,7 +30,10 @@ export default function ProfileSetupPage() {
         ...prev,
         full_name: user?.user_metadata?.full_name || '',
         avatar_url: user?.user_metadata?.avatar_url || '',
-        username: profile?.username || ''
+        username: profile?.username || '',
+        college_name: profile?.college_name || '',
+        graduation_year: profile?.graduation_year || '',
+        target_companies: profile?.target_companies || [],
       }));
     }
   }, [user, profile]);
@@ -73,6 +81,15 @@ export default function ProfileSetupPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleCompany = (company) => {
+    setFormData((prev) => ({
+      ...prev,
+      target_companies: prev.target_companies.includes(company)
+        ? prev.target_companies.filter((c) => c !== company)
+        : [...prev.target_companies, company],
+    }));
   };
 
   return (
@@ -132,6 +149,50 @@ export default function ProfileSetupPage() {
               rows={2}
               className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-neon-green/50 resize-y"
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-mono text-white/50 uppercase">College (Optional)</label>
+              <input
+                value={formData.college_name}
+                onChange={(e) => setFormData(p => ({...p, college_name: e.target.value}))}
+                placeholder="Your college name"
+                className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-neon-green/50"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-mono text-white/50 uppercase">Graduation Year (Optional)</label>
+              <input
+                type="number"
+                min="2020"
+                max="2040"
+                value={formData.graduation_year}
+                onChange={(e) => setFormData(p => ({...p, graduation_year: e.target.value}))}
+                placeholder="2027"
+                className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-neon-green/50"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-mono text-white/50 uppercase">Target Companies (Optional)</label>
+            <div className="flex flex-wrap gap-2">
+              {TARGET_COMPANIES.map((company) => (
+                <button
+                  type="button"
+                  key={company}
+                  onClick={() => toggleCompany(company)}
+                  className={`text-xs px-2 py-1 rounded-full border ${
+                    formData.target_companies.includes(company)
+                      ? 'border-neon-green bg-neon-green/20 text-neon-green'
+                      : 'border-white/10 bg-white/5 text-white/50'
+                  }`}
+                >
+                  {company}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-1">

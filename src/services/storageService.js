@@ -46,7 +46,10 @@ const localService = {
 
   toggleProblem: (problemId) => {
     const solved = localService.getSolvedProblems();
-    if (solved[problemId]) {
+    const currentlySolved = !!solved[problemId];
+    const todayCountBefore = localService.getTodayCount();
+
+    if (currentlySolved) {
       delete solved[problemId];
     } else {
       solved[problemId] = {
@@ -55,8 +58,12 @@ const localService = {
       };
     }
     localService.saveSolvedProblems(solved);
-    localService.updateStreak();
-    localService.updateSolveHistory(problemId, !!solved[problemId]);
+    localService.updateSolveHistory(problemId, !currentlySolved);
+
+    // Streak changes only on first solve of a day; untick must not affect it.
+    if (!currentlySolved && todayCountBefore === 0) {
+      localService.updateStreak();
+    }
     return solved;
   },
 
@@ -146,8 +153,6 @@ const storageService = {
   toggleProblem: async (problemId, currentlySolved) => {
     if (storageService.isCloudMode()) {
       await supabaseService.toggleProblem(_userId, problemId, currentlySolved);
-      await supabaseService.updateStreak(_userId);
-      await supabaseService.updateSolveHistory(_userId, problemId, !currentlySolved);
       return supabaseService.getSolvedProblems(_userId);
     }
     return localService.toggleProblem(problemId);

@@ -40,7 +40,7 @@ const supabaseService = {
         .eq('problem_id', problemId);
 
       if (error) console.error('Error un-solving problem:', error);
-      else await supabaseService.recordUserActivity(userId, false);
+      else await supabaseService.recordUserActivity(userId, { isSolved: false, problemId });
     } else {
       // Solve: upsert the row
       const now = new Date().toISOString();
@@ -56,7 +56,7 @@ const supabaseService = {
         }, { onConflict: 'user_id,problem_id' });
 
       if (error) console.error('Error solving problem:', error);
-      else await supabaseService.recordUserActivity(userId, true);
+      else await supabaseService.recordUserActivity(userId, { isSolved: true, problemId });
     }
   },
 
@@ -328,7 +328,7 @@ const supabaseService = {
       }, { onConflict: 'user_id,problem_id' });
 
     if (error) console.error('Error toggling striver problem:', error);
-    else await supabaseService.recordUserActivity(userId, isSolved);
+    else await supabaseService.recordUserActivity(userId, { isSolved });
   },
 
   // ─── Custom Sheets ───────────────────────────────────────
@@ -346,10 +346,10 @@ const supabaseService = {
     return data;
   },
 
-  createCustomSheet: async (userId, title) => {
+  createCustomSheet: async (userId, title, isPublic = false) => {
     const { data, error } = await supabase
       .from('custom_sheets')
-      .insert([{ user_id: userId, title }])
+      .insert([{ user_id: userId, title, is_public: isPublic }])
       .select()
       .maybeSingle();
 
@@ -360,10 +360,10 @@ const supabaseService = {
     return data;
   },
 
-  updateCustomSheet: async (userId, sheetId, title) => {
+  updateCustomSheet: async (userId, sheetId, sheetData) => {
     const { error } = await supabase
       .from('custom_sheets')
-      .update({ title })
+      .update(sheetData)
       .eq('id', sheetId)
       .eq('user_id', userId);
 
@@ -378,6 +378,81 @@ const supabaseService = {
       .eq('user_id', userId);
     
     if (error) console.error('Error deleting custom sheet:', error);
+  },
+
+  getPublicCustomSheets: async (userId) => {
+    const { data, error } = await supabase
+      .from('custom_sheets')
+      .select('*')
+      .eq('is_public', true)
+      .neq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching public sheets:', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  cloneCustomSheet: async (userId, sourceSheetId) => {
+    const { data: sourceSheet, error: sheetError } = await supabase
+      .from('custom_sheets')
+      .select('*')
+      .eq('id', sourceSheetId)
+      .eq('is_public', true)
+      .maybeSingle();
+
+    if (sheetError || !sourceSheet) {
+      console.error('Error fetching source sheet for clone:', sheetError);
+      return null;
+    }
+
+    const clonedSheet = await supabaseService.createCustomSheet(
+      userId,
+      `${sourceSheet.title} (Copy)`,
+      false
+    );
+    if (!clonedSheet) return null;
+
+    const { data: sourceProblems, error: problemsError } = await supabase
+      .from('custom_sheet_problems')
+      .select('*')
+      .eq('sheet_id', sourceSheetId);
+
+    if (problemsError) {
+      console.error('Error fetching source problems:', problemsError);
+      return clonedSheet;
+    }
+
+    if ((sourceProblems || []).length > 0) {
+      const cloneRows = sourceProblems.map((p) => ({
+        user_id: userId,
+        sheet_id: clonedSheet.id,
+        problem_title: p.problem_title,
+        difficulty: p.difficulty,
+        topics: p.topics,
+        problem_link: p.problem_link,
+        leetcode_link: p.leetcode_link || null,
+        gfg_link: p.gfg_link || null,
+        hint: p.hint,
+        examples: p.examples,
+        problem_statement: p.problem_statement,
+        input_format: p.input_format,
+        output_format: p.output_format,
+        is_solved: false,
+      }));
+
+      const { error: cloneError } = await supabase
+        .from('custom_sheet_problems')
+        .insert(cloneRows);
+
+      if (cloneError) {
+        console.error('Error cloning sheet problems:', cloneError);
+      }
+    }
+
+    return clonedSheet;
   },
 
   // ─── Custom Sheet Problems ────────────────────────────────
@@ -404,7 +479,7 @@ const supabaseService = {
       .eq('user_id', userId);
     
     if (error) console.error('Error toggling custom sheet problem:', error);
-    else await supabaseService.recordUserActivity(userId, isSolved);
+    else await supabaseService.recordUserActivity(userId, { isSolved });
   },
 
   updateCustomSheetProblem: async (userId, problemId, problemData) => {
@@ -467,9 +542,9 @@ const supabaseService = {
   },
 
   // ─── User Stats & Daily Activity (Feature 4 & 5 unified) ────────────────────────────────
-  recordUserActivity: async (userId, isSolved) => {
+  recordUserActivity: async (userId, { isSolved, problemId = null }) => {
     const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const oneDayMs = 86400000;
 
     // 1. Update Daily Activity
     const { data: activityData } = await supabase
@@ -486,6 +561,11 @@ const supabaseService = {
       .from('daily_activity')
       .upsert({ user_id: userId, activity_date: today, problems_solved: newDaily }, { onConflict: 'user_id,activity_date' });
 
+    // Keep solve history for per-day streak facts.
+    if (problemId) {
+      await supabaseService.updateSolveHistory(userId, problemId, isSolved);
+    }
+
     // 2. Update User Stats
     const { data: statsData } = await supabase
       .from('user_stats')
@@ -497,17 +577,25 @@ const supabaseService = {
 
     total_solved = isSolved ? total_solved + 1 : Math.max(0, total_solved - 1);
 
-    if (isSolved) {
-      if (last_solved_date === yesterday && newDaily === 1) {
-        current_streak += 1; // Unmaintained streak grows
-      } else if (last_solved_date !== today) {
-        current_streak = 1; // Restart streak
+    // Streak changes only on first solve of a day.
+    if (isSolved && newDaily === 1) {
+      if (!last_solved_date) {
+        current_streak = 1;
+      } else {
+        const lastDate = new Date(`${last_solved_date}T00:00:00`);
+        const todayDate = new Date(`${today}T00:00:00`);
+        const gapDays = Math.round((todayDate.getTime() - lastDate.getTime()) / oneDayMs);
+
+        if (gapDays === 1) {
+          current_streak += 1;
+        } else if (gapDays > 1) {
+          current_streak = 1;
+        }
       }
       last_solved_date = today;
       longest_streak = Math.max(current_streak, longest_streak);
     }
-    
-    // We do not decrement streak immediately if they un-solve, just let it recalculate dynamically or stand.
+    // Untick never decrements streak values.
 
     await supabase
       .from('user_stats')
@@ -661,7 +749,7 @@ const supabaseService = {
     return data || [];
   },
 
-  getFriendsLeaderboard: async (userId) => {
+  getFriendsLeaderboard: async (userId, timeFilter = 'all') => {
     // Fetch accepted friendships where user is requester OR addressee
     const { data: friendships } = await supabase
       .from('friendships')
@@ -672,23 +760,53 @@ const supabaseService = {
     const friendIds = (friendships || []).map(f => f.requester_id === userId ? f.addressee_id : f.requester_id);
     const allIds = [userId, ...friendIds];
 
-    // Fetch stats & profiles of these users concurrently
-    const [statsResponse, profilesResponse] = await Promise.all([
-      supabase.from('user_stats').select('user_id, total_solved, current_streak').in('user_id', allIds).order('total_solved', { ascending: false }),
-      supabase.from('profiles').select('id, username, avatar_url').in('id', allIds)
+    const [profilesResponse, badgesResponse, statsResponse, activityResponse] = await Promise.all([
+      supabase.from('profiles').select('id, username, avatar_url').in('id', allIds),
+      supabase.from('user_badges').select('user_id').in('user_id', allIds),
+      supabase.from('user_stats').select('user_id, total_solved, current_streak').in('user_id', allIds),
+      timeFilter === 'all'
+        ? Promise.resolve({ data: [] })
+        : supabase
+            .from('daily_activity')
+            .select('user_id, problems_solved, activity_date')
+            .in('user_id', allIds)
+            .gte(
+              'activity_date',
+              new Date(Date.now() - (timeFilter === 'weekly' ? 7 : 30) * 86400000).toISOString().split('T')[0]
+            ),
     ]);
 
-    const statsData = statsResponse.data;
-    const profilesData = profilesResponse.data;
+    const profilesData = profilesResponse.data || [];
+    const statsData = statsResponse.data || [];
+    const badgesData = badgesResponse.data || [];
+    const activityData = activityResponse.data || [];
 
-    return (statsData || []).map(stat => {
-      const profile = profilesData?.find(p => p.id === stat.user_id) || {};
+    const badgeCountByUser = badgesData.reduce((acc, row) => {
+      acc[row.user_id] = (acc[row.user_id] || 0) + 1;
+      return acc;
+    }, {});
+
+    const activitySumByUser = activityData.reduce((acc, row) => {
+      acc[row.user_id] = (acc[row.user_id] || 0) + (row.problems_solved || 0);
+      return acc;
+    }, {});
+
+    const rows = allIds.map((id) => {
+      const profile = profilesData.find((p) => p.id === id) || {};
+      const stat = statsData.find((s) => s.user_id === id) || {};
+      const periodSolved = timeFilter === 'all' ? (stat.total_solved || 0) : (activitySumByUser[id] || 0);
+
       return {
-        ...stat,
+        user_id: id,
         username: profile.username || 'Unknown',
-        avatar_url: profile.avatar_url,
+        avatar_url: profile.avatar_url || null,
+        total_solved: periodSolved,
+        current_streak: stat.current_streak || 0,
+        badge_count: badgeCountByUser[id] || 0,
       };
     });
+
+    return rows.sort((a, b) => b.total_solved - a.total_solved);
   },
 
   subscribeToLeaderboard: (userId, callback) => {

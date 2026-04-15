@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -11,8 +11,7 @@ export default function SignupPage() {
   const [step, setStep] = useState('form'); // 'form' | 'otp'
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
-  const otpRefs = useRef([]);
+  const [otpCode, setOtpCode] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const [formData, setFormData] = useState({
@@ -78,43 +77,16 @@ export default function SignupPage() {
     }
   };
 
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) value = value.slice(-1);
-    if (!/^[0-9]*$/.test(value)) return;
-
-    const newOtp = [...otpValues];
-    newOtp[index] = value;
-    setOtpValues(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const newOtp = [...otpValues];
-    for (let i = 0; i < pasted.length; i++) {
-      newOtp[i] = pasted[i];
-    }
-    setOtpValues(newOtp);
-    // Focus the next empty input or the last one
-    const nextEmpty = newOtp.findIndex(v => !v);
-    otpRefs.current[nextEmpty === -1 ? 5 : nextEmpty]?.focus();
+  const handleOtpChange = (value) => {
+    // Only allow digits
+    const cleaned = value.replace(/\D/g, '');
+    setOtpCode(cleaned);
   };
 
   const handleVerifyOtp = async () => {
-    const code = otpValues.join('');
-    if (code.length !== 6) {
-      toast.error('Please enter the 6-digit code');
+    const code = otpCode.trim();
+    if (code.length < 6) {
+      toast.error('Please enter the verification code from your email');
       return;
     }
 
@@ -165,38 +137,33 @@ export default function SignupPage() {
               <Mail className="text-neon-green" size={28} />
             </div>
             <h1 className="text-2xl font-display font-bold text-white">Verify Your Email</h1>
-            <p className="text-sm text-white/40 font-body mt-2">
-              We sent a 6-digit code to <span className="text-neon-green/70 font-mono">{formData.email}</span>
+            <p className="text-sm text-white/40 font-body mt-2 leading-relaxed">
+              We sent a verification code to <span className="text-neon-green/70 font-mono">{formData.email}</span>
             </p>
           </div>
 
           <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 backdrop-blur-xl">
-            {/* OTP Input Row */}
-            <div className="flex justify-center gap-3 mb-6">
-              {otpValues.map((val, i) => (
-                <input
-                  key={i}
-                  ref={(el) => (otpRefs.current[i] = el)}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={val}
-                  onChange={(e) => handleOtpChange(i, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                  onPaste={i === 0 ? handleOtpPaste : undefined}
-                  className={`w-12 h-14 text-center text-xl font-mono font-bold rounded-xl border transition-all duration-300 focus:outline-none ${
-                    val
-                      ? 'border-neon-green/50 bg-neon-green/5 text-neon-green'
-                      : 'border-white/10 bg-black/40 text-white'
-                  } focus:border-neon-green`}
-                  id={`otp-input-${i}`}
-                />
-              ))}
+            {/* OTP Input */}
+            <div className="mb-6">
+              <input
+                type="text"
+                inputMode="numeric"
+                autoFocus
+                value={otpCode}
+                onChange={(e) => handleOtpChange(e.target.value)}
+                placeholder="Enter verification code"
+                className={`w-full text-center text-2xl font-mono font-bold tracking-[0.4em] rounded-xl border py-4 px-4 transition-all duration-300 focus:outline-none ${
+                  otpCode.length >= 6
+                    ? 'border-neon-green/50 bg-neon-green/5 text-neon-green'
+                    : 'border-white/10 bg-black/40 text-white placeholder:text-white/15'
+                } focus:border-neon-green`}
+                id="otp-input"
+              />
             </div>
 
             <button
               onClick={handleVerifyOtp}
-              disabled={loading || otpValues.join('').length !== 6}
+              disabled={loading || otpCode.length < 6}
               className="w-full flex items-center justify-center gap-2 py-3 bg-neon-green text-bg-dark rounded-xl text-sm font-mono font-semibold hover:bg-neon-green/90 transition-all duration-300 shadow-[0_0_20px_rgba(0,255,136,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
               id="verify-otp-btn"
             >

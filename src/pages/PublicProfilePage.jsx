@@ -120,6 +120,20 @@ export default function PublicProfilePage() {
             {profileData.about && (
               <p className="text-xs text-white/40 font-body mt-2 max-w-sm leading-relaxed">{profileData.about}</p>
             )}
+            {(profileData.college_name || profileData.graduation_year) && (
+              <p className="text-[11px] text-white/40 font-mono mt-2">
+                {profileData.college_name || 'College'} {profileData.graduation_year ? `· Class of ${profileData.graduation_year}` : ''}
+              </p>
+            )}
+            {!!profileData.target_companies?.length && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {profileData.target_companies.slice(0, 4).map((company) => (
+                  <span key={company} className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-white/10 text-white/60">
+                    {company}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

@@ -6,7 +6,11 @@ import { Search, UserPlus } from 'lucide-react';
 import FriendRequestList from '../components/Leaderboard/FriendRequestList';
 import { toast } from 'react-hot-toast';
 
-const FILTERS = ['All Time', 'This Week', 'This Month'];
+const FILTERS = [
+  { label: 'All Time', value: 'all' },
+  { label: 'Weekly', value: 'weekly' },
+  { label: 'Monthly', value: 'monthly' },
+];
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
@@ -14,7 +18,7 @@ export default function LeaderboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('All Time');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [sentRequests, setSentRequests] = useState(new Set());
 
   useEffect(() => {
@@ -33,12 +37,12 @@ export default function LeaderboardPage() {
     return () => {
       if (subscription) subscription.unsubscribe();
     };
-  }, [user]);
+  }, [user, activeFilter]);
 
   const loadLeaderboard = async () => {
     if (!user) return;
     setLoading(true);
-    const data = await supabaseService.getFriendsLeaderboard(user.id);
+    const data = await supabaseService.getFriendsLeaderboard(user.id, activeFilter);
     setLeaderboard(data || []);
     setLoading(false);
   };
@@ -114,16 +118,16 @@ export default function LeaderboardPage() {
           <div className="flex gap-2">
             {FILTERS.map(f => (
               <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
+                key={f.value}
+                onClick={() => setActiveFilter(f.value)}
                 className={`px-3 py-1.5 text-xs font-mono rounded-lg transition-all duration-300 ${
-                  activeFilter === f
+                  activeFilter === f.value
                     ? 'text-neon-green bg-neon-green/10 border border-neon-green/20'
                     : 'text-white/40 border border-white/5 hover:text-white/70 hover:border-white/10'
                 }`}
-                id={`filter-${f.toLowerCase().replace(' ', '-')}`}
+                id={`filter-${f.value}`}
               >
-                {f}
+                {f.label}
               </button>
             ))}
           </div>
@@ -171,7 +175,7 @@ export default function LeaderboardPage() {
                     </td>
                     <td className="py-3 px-4 text-center font-bold text-white/90">{entry.total_solved || 0}</td>
                     <td className="py-3 px-4 text-center text-white/60 hidden sm:table-cell font-mono">{entry.current_streak || 0} 🔥</td>
-                    <td className="py-3 px-4 text-center text-white/60 hidden sm:table-cell font-mono">-</td>
+                    <td className="py-3 px-4 text-center text-white/60 hidden sm:table-cell font-mono">{entry.badge_count || 0}</td>
                   </tr>
                 ))}
                 {leaderboard.length === 0 && (
