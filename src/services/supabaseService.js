@@ -704,19 +704,81 @@ const supabaseService = {
   },
 
   searchUsers: async (query) => {
+    const normalized = (query || '').trim().toLowerCase();
+    if (!normalized) return [];
     const { data } = await supabase
       .from('profiles')
       .select('id, username, avatar_url')
-      .ilike('username', `%${query}%`)
+      .ilike('username', `%${normalized}%`)
       .limit(10);
     return data || [];
   },
 
   sendFriendRequest: async (requesterId, addresseeId) => {
+    if (requesterId === addresseeId) {
+      return { ok: false, reason: 'self_request' };
+    }
+
+    const { data: existingRows, error: existingError } = await supabase
+      .from('friendships')
+      .select('id, requester_id, addressee_id, status')
+      .or(
+        `and(requester_id.eq.${requesterId},addressee_id.eq.${addresseeId}),and(requester_id.eq.${addresseeId},addressee_id.eq.${requesterId})`
+      );
+
+    if (existingError) {
+      console.error('Error checking existing friendship:', existingError);
+      return { ok: false, reason: 'error' };
+    }
+
+    const rows = existingRows || [];
+    const accepted = rows.find((r) => r.status === 'accepted');
+    if (accepted) return { ok: false, reason: 'already_friends' };
+
+    const sameDirectionPending = rows.find(
+      (r) => r.requester_id === requesterId && r.addressee_id === addresseeId && r.status === 'pending'
+    );
+    if (sameDirectionPending) return { ok: false, reason: 'already_sent' };
+
+    const reversePending = rows.find(
+      (r) => r.requester_id === addresseeId && r.addressee_id === requesterId && r.status === 'pending'
+    );
+    if (reversePending) {
+      const { error: acceptError } = await supabase
+        .from('friendships')
+        .update({ status: 'accepted' })
+        .eq('id', reversePending.id);
+
+      if (acceptError) {
+        console.error('Error auto-accepting reverse request:', acceptError);
+        return { ok: false, reason: 'error' };
+      }
+      return { ok: true, autoAccepted: true };
+    }
+
+    const sameDirectionRejected = rows.find(
+      (r) => r.requester_id === requesterId && r.addressee_id === addresseeId && r.status === 'rejected'
+    );
+    if (sameDirectionRejected) {
+      const { error: reopenError } = await supabase
+        .from('friendships')
+        .update({ status: 'pending' })
+        .eq('id', sameDirectionRejected.id);
+      if (reopenError) {
+        console.error('Error re-sending rejected request:', reopenError);
+        return { ok: false, reason: 'error' };
+      }
+      return { ok: true };
+    }
+
     const { error } = await supabase
       .from('friendships')
       .insert([{ requester_id: requesterId, addressee_id: addresseeId }]);
-    if (error) console.error('Error sending friend request:', error);
+    if (error) {
+      console.error('Error sending friend request:', error);
+      return { ok: false, reason: 'error' };
+    }
+    return { ok: true };
   },
 
   getFriendshipStatus: async (currentUserId, targetUserId) => {

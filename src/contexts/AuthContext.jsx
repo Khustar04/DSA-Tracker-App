@@ -6,6 +6,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import supabaseService from '../services/supabaseService';
 
 const AuthContext = createContext(null);
+const PROFILE_FETCH_TIMEOUT = Symbol('PROFILE_FETCH_TIMEOUT');
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -21,14 +22,19 @@ export function AuthProvider({ children }) {
         setProfile(null);
         return;
       }
-      const prof = await Promise.race([
+      const result = await Promise.race([
         supabaseService.getProfile(authSession.user.id),
-        new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
+        new Promise((resolve) => setTimeout(() => resolve(PROFILE_FETCH_TIMEOUT), 8000)),
       ]);
-      setProfile(prof || { _isNew: true });
+      // Important: timeout is not equal to "new user". Keep prior known profile if possible.
+      if (result === PROFILE_FETCH_TIMEOUT) {
+        setProfile((prev) => (prev && !prev._isNew ? prev : { _profilePending: true }));
+        return;
+      }
+      setProfile(result || { _isNew: true });
     } catch (error) {
       console.error('Error fetching profile:', error);
-      setProfile({ _isNew: true });
+      setProfile((prev) => (prev && !prev._isNew ? prev : { _profilePending: true }));
     }
   };
 
@@ -114,7 +120,7 @@ export function AuthProvider({ children }) {
   };
 
   // ─── Google OAuth login ────────────────────────────────────
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = async (redirectToPath = '') => {
     if (!isSupabaseConfigured()) {
       return { error: { message: 'Supabase not configured. Add credentials to .env file.' } };
     }
@@ -122,7 +128,7 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}${redirectToPath}`,
       },
     });
 

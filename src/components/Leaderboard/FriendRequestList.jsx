@@ -14,6 +14,25 @@ export default function FriendRequestList({ onUpdate }) {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      loadRequests();
+    }, 5000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadRequests();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [user]);
+
   const loadRequests = async () => {
     const data = await supabaseService.getFriendRequests(user.id);
     setRequests(data);

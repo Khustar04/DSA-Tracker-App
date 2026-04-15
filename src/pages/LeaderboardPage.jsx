@@ -20,6 +20,7 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
   const [sentRequests, setSentRequests] = useState(new Set());
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -53,20 +54,50 @@ export default function LeaderboardPage() {
     }
   };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    const results = await supabaseService.searchUsers(searchQuery);
+  const performSearch = async (query) => {
+    const q = query.trim();
+    if (!q) {
+      setSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    const results = await supabaseService.searchUsers(q);
     // filter out current user and already friends
     const filtered = results.filter(u => u.id !== user.id && !leaderboard.find(l => l.user_id === u.id));
     setSearchResults(filtered);
+    setIsSearching(false);
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    performSearch(searchQuery);
   };
 
   const sendRequest = async (addresseeId) => {
-    await supabaseService.sendFriendRequest(user.id, addresseeId);
+    const result = await supabaseService.sendFriendRequest(user.id, addresseeId);
+    if (!result?.ok) {
+      if (result?.reason === 'already_friends') toast('You are already friends.');
+      else if (result?.reason === 'already_sent') toast('Request already sent.');
+      else if (result?.reason === 'self_request') toast.error('You cannot add yourself.');
+      else toast.error('Could not send request.');
+      return;
+    }
     setSentRequests(prev => new Set(prev).add(addresseeId));
-    toast.success('Friend request sent!');
+    if (result.autoAccepted) toast.success('You are now friends!');
+    else toast.success('Friend request sent!');
+    loadLeaderboard();
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        performSearch(searchQuery);
+      } else {
+        setSearchResults([]);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const getRankEmoji = (index) => {
     if (index === 0) return '🥇';
@@ -244,7 +275,7 @@ export default function LeaderboardPage() {
                   </div>
                 ))
               ) : (
-                searchQuery && <p className="text-xs text-white/40 text-center">No new users found.</p>
+                searchQuery && !isSearching && <p className="text-xs text-white/40 text-center">No new users found.</p>
               )}
             </div>
           </div>

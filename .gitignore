@@ -4,6 +4,7 @@ dist
 .env.example
 .DS_Store
 supabase_schema.sql
+supabase-migration-feature-updates.sql
 supabase-migration-auth.sql
 supabase-migration-storage.sql
 supabase_schema_2.sql

@@ -99,9 +99,11 @@ function ProtectedLayout() {
   // If user is not authenticated, redirect to login
   if (!user) return <Navigate to="/login" replace />;
 
-  // If user is logged in, but profile is missing/incomplete
-  if (user && profile?._isNew) return <Navigate to="/setup-profile" replace />;
+  // If profile fetch is delayed, wait for it before rendering content.
+  if (user && profile?._profilePending) return <FullPageLoader />;
   
+  // Allow user to proceed with or without a completed profile.
+  // Setup is now explicitly triggered only during the initial signup flow.
   return <AppLayout />;
 }
 

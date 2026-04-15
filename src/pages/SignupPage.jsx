@@ -108,7 +108,7 @@ export default function SignupPage() {
 
   const handleGoogleSignup = async () => {
     setLoading(true);
-    const { error } = await loginWithGoogle();
+    const { error } = await loginWithGoogle('/setup-profile');
     if (error) {
       toast.error(error.message);
       setLoading(false);
